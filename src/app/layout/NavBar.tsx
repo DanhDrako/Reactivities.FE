@@ -6,20 +6,17 @@ import {
   Typography,
   Button,
   Container,
-  MenuItem,
+  MenuItem
 } from '@mui/material';
 
-type Props = {
-  openForm: () => void;
-};
-export default function NavBar({ openForm }: Props) {
+export default function NavBar() {
   return (
     <Box sx={{ flexGrow: 1 }}>
       <AppBar
         position="static"
         sx={{
           backgroundImage:
-            'linear-gradient(135deg, #182a73 0%, #218aae 69%, #20a7ac 89%)',
+            'linear-gradient(135deg, #182a73 0%, #218aae 69%, #20a7ac 89%)'
         }}
       >
         <Container maxWidth="xl">
@@ -37,7 +34,7 @@ export default function NavBar({ openForm }: Props) {
                 sx={{
                   fontSize: '1.2rem',
                   textTransform: 'uppercase',
-                  fontWeight: 'bold',
+                  fontWeight: 'bold'
                 }}
               >
                 Activities
@@ -46,7 +43,7 @@ export default function NavBar({ openForm }: Props) {
                 sx={{
                   fontSize: '1.2rem',
                   textTransform: 'uppercase',
-                  fontWeight: 'bold',
+                  fontWeight: 'bold'
                 }}
               >
                 About
@@ -55,7 +52,7 @@ export default function NavBar({ openForm }: Props) {
                 sx={{
                   fontSize: '1.2rem',
                   textTransform: 'uppercase',
-                  fontWeight: 'bold',
+                  fontWeight: 'bold'
                 }}
               >
                 Contact
@@ -65,7 +62,7 @@ export default function NavBar({ openForm }: Props) {
               size="large"
               variant="contained"
               color="warning"
-              onClick={openForm}
+              onClick={() => {}}
             >
               Create activity
             </Button>
