@@ -21,6 +21,18 @@ export const useAccount = () => {
     }
   });
 
+  const { data: currentUser, isLoading: loadingUserInfo } = useQuery({
+    queryKey: ['user'],
+    queryFn: async () => {
+      const response = await agent.get<User>('/account/user-info');
+      return response.data;
+    },
+    enabled:
+      !queryClient.getQueryData(['user']) &&
+      location.pathname !== '/login' &&
+      location.pathname !== '/register'
+  });
+
   const registerUser = useMutation({
     mutationFn: async (creds: RegisterSchema) => {
       await agent.post('/account/register', creds);
@@ -46,23 +58,11 @@ export const useAccount = () => {
     }
   });
 
-  const { data: currentUser, isLoading: loadingUserInfo } = useQuery({
-    queryKey: ['user'],
-    queryFn: async () => {
-      const response = await agent.get<User>('/account/user-info');
-      return response.data;
-    },
-    enabled:
-      !queryClient.getQueryData(['user']) &&
-      location.pathname !== '/login' &&
-      location.pathname !== '/register'
-  });
-
   return {
     loginUser,
     currentUser,
-    logoutUser,
     loadingUserInfo,
-    registerUser
+    registerUser,
+    logoutUser
   };
 };

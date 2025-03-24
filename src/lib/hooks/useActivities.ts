@@ -7,13 +7,17 @@ export const useActivities = (id?: string) => {
   const queryClient = useQueryClient();
   const { currentUser } = useAccount();
   const location = useLocation();
-  const { data: activities, isLoading } = useQuery({
-    queryKey: ['activities'],
-    queryFn: async () => {
-      const response = await agent.get<Activity[]>('/activities');
+
+  const createActivity = useMutation({
+    mutationFn: async (activity: Activity) => {
+      const response = await agent.post('/activities', activity);
       return response.data;
     },
-    enabled: !id && location.pathname === '/activities' && !!currentUser
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ['activities']
+      });
+    }
   });
 
   const { data: activity, isLoading: isLoadingActivity } = useQuery({
@@ -25,21 +29,18 @@ export const useActivities = (id?: string) => {
     enabled: !!id && !!currentUser
   });
 
+  const { data: activities, isLoading } = useQuery({
+    queryKey: ['activities'],
+    queryFn: async () => {
+      const response = await agent.get<Activity[]>('/activities');
+      return response.data;
+    },
+    enabled: !id && location.pathname === '/activities' && !!currentUser
+  });
+
   const updateActivity = useMutation({
     mutationFn: async (activity: Activity) => {
       await agent.put('/activities', activity);
-    },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ['activities']
-      });
-    }
-  });
-
-  const createActivity = useMutation({
-    mutationFn: async (activity: Activity) => {
-      const response = await agent.post('/activities', activity);
-      return response.data;
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({
@@ -60,12 +61,12 @@ export const useActivities = (id?: string) => {
   });
 
   return {
+    createActivity,
+    activity,
+    isLoadingActivity,
     activities,
     isLoading,
     updateActivity,
-    createActivity,
-    deleteActivity,
-    activity,
-    isLoadingActivity
+    deleteActivity
   };
 };
