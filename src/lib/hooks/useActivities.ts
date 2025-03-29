@@ -8,14 +8,20 @@ export const useActivities = (id?: string) => {
   const { currentUser } = useAccount();
   const location = useLocation();
 
-  const createActivity = useMutation({
-    mutationFn: async (activity: Activity) => {
-      const response = await agent.post('/activities', activity);
+  const { data: activities, isLoading } = useQuery({
+    queryKey: ['activities'],
+    queryFn: async () => {
+      const response = await agent.get<Activity[]>('/activities');
       return response.data;
     },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ['activities']
+    enabled: !id && location.pathname === '/activities' && !!currentUser,
+    select: (data) => {
+      return data.map((activity) => {
+        return {
+          ...activity,
+          isHost: currentUser?.id === activity.hostId,
+          isGoing: activity.attendees.some((x) => x.id === currentUser?.id)
+        };
       });
     }
   });
@@ -26,16 +32,26 @@ export const useActivities = (id?: string) => {
       const response = await agent.get<Activity>(`/activities/${id}`);
       return response.data;
     },
-    enabled: !!id && !!currentUser
+    enabled: !!id && !!currentUser,
+    select: (data) => {
+      return {
+        ...data,
+        isHost: currentUser?.id === data.hostId,
+        isGoing: data.attendees.some((x) => x.id === currentUser?.id)
+      };
+    }
   });
 
-  const { data: activities, isLoading } = useQuery({
-    queryKey: ['activities'],
-    queryFn: async () => {
-      const response = await agent.get<Activity[]>('/activities');
+  const createActivity = useMutation({
+    mutationFn: async (activity: Activity) => {
+      const response = await agent.post('/activities', activity);
       return response.data;
     },
-    enabled: !id && location.pathname === '/activities' && !!currentUser
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ['activities']
+      });
+    }
   });
 
   const updateActivity = useMutation({
@@ -60,13 +76,73 @@ export const useActivities = (id?: string) => {
     }
   });
 
+  const updateAttendance = useMutation({
+    mutationFn: async (id: string) => {
+      await agent.post(`/activities/${id}/attend`);
+    },
+    onMutate: async (activityId: string) => {
+      await queryClient.cancelQueries({ queryKey: ['activities', activityId] });
+
+      const prevActivity = queryClient.getQueryData<Activity>([
+        'activities',
+        activityId
+      ]);
+
+      queryClient.setQueryData<Activity>(
+        ['activities', activityId],
+        (oldActivity) => {
+          if (!oldActivity || !currentUser) {
+            return oldActivity;
+          }
+
+          const isHost = oldActivity.hostId === currentUser.id;
+          const isAttending = oldActivity.attendees.some(
+            (x) => x.id === currentUser.id
+          );
+
+          return {
+            ...oldActivity,
+            isCancelled: isHost
+              ? !oldActivity.isCancelled
+              : oldActivity.isCancelled,
+            attendees: isAttending
+              ? isHost
+                ? oldActivity.attendees
+                : oldActivity.attendees.filter((x) => x.id !== currentUser.id)
+              : [
+                  ...oldActivity.attendees,
+                  {
+                    id: currentUser.id,
+                    displayName: currentUser.displayName,
+                    imageUrl: currentUser.imageUrl
+                  }
+                ]
+          };
+        }
+      );
+
+      return { prevActivity };
+    },
+    onError: (error, activityId, context) => {
+      console.log('prevActivity' + context?.prevActivity);
+      console.log(error);
+      if (context?.prevActivity) {
+        queryClient.setQueryData(
+          ['activities', activityId],
+          context.prevActivity
+        );
+      }
+    }
+  });
+
   return {
-    createActivity,
-    activity,
-    isLoadingActivity,
     activities,
     isLoading,
+    activity,
+    isLoadingActivity,
+    createActivity,
     updateActivity,
-    deleteActivity
+    deleteActivity,
+    updateAttendance
   };
 };
